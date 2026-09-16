@@ -14,10 +14,11 @@ PERMISSION_MAP = {
     'enter_investment': 50, 'approve_investment': 60, 'view_reports': 10,
 }
 
-ASSET_CLASSES = ['MONEY_MARKET', 'BONDS', 'GLOBAL_EQUITIES', 'MUTUAL_FUNDS']
+ASSET_CLASSES = ['MONEY_MARKET', 'BONDS', 'GSE_EQUITIES', 'GLOBAL_EQUITIES', 'MUTUAL_FUNDS']
 ASSET_LABELS = {
     'MONEY_MARKET': 'Money Market',
     'BONDS': 'Bonds & Fixed Income',
+    'GSE_EQUITIES': 'GSE Equities',
     'GLOBAL_EQUITIES': 'Global Equities',
     'MUTUAL_FUNDS': 'Mutual Funds & ETFs',
 }
@@ -132,7 +133,6 @@ class Investment(db.Model):
     unit_cost        = db.Column(db.Float, nullable=True)
     total_cost       = db.Column(db.Float, nullable=True)
     current_price    = db.Column(db.Float, nullable=True)
-    live_price       = db.Column(db.Float, nullable=True)
     face_value       = db.Column(db.Float, nullable=True)
     interest_rate    = db.Column(db.Float, nullable=True)
     coupon_rate      = db.Column(db.Float, nullable=True)
@@ -152,6 +152,16 @@ class Investment(db.Model):
         return max(0, (self.maturity_date - date.today()).days) if self.maturity_date else None
 
     @property
+    def live_price(self):
+        """Latest price from the live market-data board (StockPrice), kept
+        fresh by utils/market_data.py. None if this symbol isn't tracked
+        live — computed_mkt_value falls back to current_price."""
+        if not self.symbol:
+            return None
+        sp = StockPrice.query.filter_by(symbol=self.symbol).first()
+        return sp.price if sp and sp.price is not None else None
+
+    @property
     def accrued_interest(self):
         if self.asset_class in ('MONEY_MARKET', 'BONDS') and self.face_value and (self.interest_rate or self.coupon_rate):
             rate = self.interest_rate or self.coupon_rate
@@ -169,7 +179,7 @@ class Investment(db.Model):
             if self.face_value and (self.interest_rate or self.coupon_rate):
                 return (self.face_value or 0) + self.accrued_interest
             return self.total_cost or 0
-        elif self.asset_class in ('GLOBAL_EQUITIES', 'MUTUAL_FUNDS'):
+        elif self.asset_class in ('GSE_EQUITIES', 'GLOBAL_EQUITIES', 'MUTUAL_FUNDS'):
             price = self.live_price if self.live_price is not None else self.current_price
             if self.quantity and price:
                 return self.quantity * price

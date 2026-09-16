@@ -166,12 +166,14 @@ def generate_pvr(account_number):
         ts = tbl_style(); ts.add('ALIGN',(2,0),(-1,-1),'RIGHT'); total_row(ts, len(rows)-1)
         tbl.setStyle(ts); story.append(tbl); story.append(Spacer(1,0.25*cm))
 
-    ge = [i for i in investments if i.asset_class == 'GLOBAL_EQUITIES']
-    if ge:
-        section_heading(story, 'GLOBAL EQUITIES', S)
+    def _equities_section(title, asset_class):
+        eq = [i for i in investments if i.asset_class == asset_class]
+        if not eq:
+            return
+        section_heading(story, title, S)
         rows = [['Symbol', 'Security', 'Exchange', 'Qty', 'Unit Cost', 'Mkt Price', 'Mkt Value (USD)', 'Gain/Loss', 'Return %']]
         tot_cost = tot_mv = 0
-        for i in ge:
+        for i in eq:
             mv = i.computed_mkt_value; cost = i.total_cost or 0
             gain = mv-cost; ret = (gain/cost*100) if cost else 0
             tot_cost += cost; tot_mv += mv
@@ -183,6 +185,9 @@ def generate_pvr(account_number):
         tbl = Table(rows, colWidths=[1.8*cm,4*cm,2.2*cm,1.5*cm,2*cm,2*cm,2.8*cm,2.2*cm,1.6*cm])
         ts = tbl_style(); ts.add('ALIGN',(3,0),(-1,-1),'RIGHT'); total_row(ts, len(rows)-1)
         tbl.setStyle(ts); story.append(tbl); story.append(Spacer(1,0.25*cm))
+
+    _equities_section('GSE EQUITIES — GHANA STOCK EXCHANGE', 'GSE_EQUITIES')
+    _equities_section('GLOBAL EQUITIES', 'GLOBAL_EQUITIES')
 
     mf = [i for i in investments if i.asset_class == 'MUTUAL_FUNDS']
     if mf:

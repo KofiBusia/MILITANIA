@@ -87,9 +87,10 @@ def create_app():
             _safe(db.create_all, 'db.create_all')
             from utils.seed import seed_super_admin
             _safe(seed_super_admin, 'seed_super_admin')
-            from utils.market_data import fetch_fx_rates, fetch_global_prices
+            from utils.market_data import fetch_fx_rates, fetch_global_prices, fetch_gse_prices
             _safe(fetch_fx_rates, 'fetch_fx_rates')
             _safe(fetch_global_prices, 'fetch_global_prices')
+            _safe(fetch_gse_prices, 'fetch_gse_prices')
         finally:
             if pg_lock_conn is not None:
                 from sqlalchemy import text as _text

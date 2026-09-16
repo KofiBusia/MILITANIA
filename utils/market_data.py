@@ -94,6 +94,86 @@ def fetch_global_prices():
     return ok_count
 
 
+def fetch_gse_prices():
+    """
+    Scrape live Ghana Stock Exchange prices from afx.kwayisi.org — the same
+    source and parsing approach proven in production for Zagadat Capital.
+    The site's markup has no stable CSS class on its price table, so the
+    table is located structurally (the one whose header row contains both
+    "Ticker" and "Price") rather than by a brittle class selector. Uses the
+    lxml parser: the site's HTML doesn't close <td>/<tr> tags, and
+    html.parser's auto-nesting under that garbles row boundaries.
+
+    GSE stocks trade in Ghanaian Cedis, but Militania is USD-native, so
+    each scraped price is converted to USD using the live FX table before
+    being stored — fetch_fx_rates() should run before this so the rate is
+    fresh (both startup and refresh_if_stale() below call them in order).
+    """
+    try:
+        from bs4 import BeautifulSoup
+        resp = requests.get('https://afx.kwayisi.org/gse/', headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+        }, timeout=(5, 10))
+        soup = BeautifulSoup(resp.text, 'lxml')
+
+        table = None
+        for t in soup.find_all('table'):
+            thead = t.find('thead')
+            header_text = thead.get_text() if thead else ''
+            if 'Ticker' in header_text and 'Price' in header_text:
+                table = t
+                break
+        if not table or not table.find('tbody'):
+            print('[GSE] price table not found — site layout may have changed')
+            return 0
+
+        ghs_per_usd = get_fx_rate('USD', 'GHS')
+        if not ghs_per_usd:
+            print('[GSE] no USD/GHS rate available yet — skipping this cycle')
+            return 0
+
+        rows = table.find('tbody').find_all('tr')
+        updated = 0
+        with db.session.no_autoflush:
+            for row in rows:
+                cols = row.find_all('td')
+                if len(cols) < 4:
+                    continue
+                symbol = cols[0].get_text(strip=True)
+                name = cols[1].get_text(strip=True)
+                price_text = cols[3].get_text(strip=True).replace(',', '')
+                if not symbol or not price_text:
+                    continue
+                try:
+                    price_ghs = float(price_text)
+                except ValueError:
+                    continue
+                price_usd = round(price_ghs / ghs_per_usd, 4)
+
+                sp = StockPrice.query.filter_by(symbol=symbol).first()
+                if sp and sp.is_manual_override:
+                    continue
+                if sp:
+                    old_price = sp.price
+                    sp.price = price_usd
+                    if name:
+                        sp.name = name
+                    sp.change_pct = round(((price_usd - old_price) / old_price * 100), 3) if old_price else 0
+                    sp.exchange = sp.exchange or 'GSE'
+                    sp.updated_at = datetime.utcnow()
+                else:
+                    sp = StockPrice(symbol=symbol, name=name or symbol, price=price_usd,
+                                     exchange='GSE', change_pct=0.0)
+                    db.session.add(sp)
+                updated += 1
+            db.session.commit()
+        return updated
+    except Exception as e:
+        db.session.rollback()
+        print(f'[GSE] scrape error: {e}')
+        return 0
+
+
 def get_fx_rate(base, quote):
     """Returns: 1 <base> = X <quote>. Both currencies are matched against
     our USD-anchored table, converting via USD as the pivot when neither
@@ -149,5 +229,6 @@ def refresh_if_stale(max_age_seconds=300):
         with app_obj.app_context():
             fetch_fx_rates()
             fetch_global_prices()
+            fetch_gse_prices()
 
     threading.Thread(target=_do_refresh, daemon=True).start()

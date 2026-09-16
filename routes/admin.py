@@ -323,8 +323,8 @@ def resume_live_price(stock_id):
 @admin_bp.route('/refresh-market-data')
 @admin_required
 def refresh_market_data():
-    from utils.market_data import fetch_fx_rates, fetch_global_prices
-    fetch_fx_rates(); fetch_global_prices()
+    from utils.market_data import fetch_fx_rates, fetch_global_prices, fetch_gse_prices
+    fetch_fx_rates(); fetch_global_prices(); fetch_gse_prices()
     flash('Market data refreshed.', 'success')
     return redirect(request.referrer or url_for('admin.dashboard'))
 
