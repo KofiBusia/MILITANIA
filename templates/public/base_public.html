@@ -4,11 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Militania Investment{% endblock %}</title>
-<meta name="description" content="Militania Investment — world-class portfolio management, live market intelligence, and transparent reporting.">
-<meta property="og:title" content="Militania Investment">
-<meta property="og:description" content="World-class portfolio management, live market intelligence, and transparent reporting.">
+<meta name="description" content="Militania Investment — investing in strong founders and growing businesses. Portfolio management, live market intelligence, and transparent reporting, quoted in USD.">
+
+<!-- Link preview (WhatsApp, iMessage, Telegram, Slack, social media, etc.) -->
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Militania Investment">
+<meta property="og:title" content="Militania Investment">
+<meta property="og:description" content="Investing in strong founders and growing businesses. Portfolio management and live market intelligence, quoted in USD.">
+<meta property="og:image" content="{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='img/og-banner.png') }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="{{ request.url }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Militania Investment">
+<meta name="twitter:description" content="Investing in strong founders and growing businesses. Portfolio management and live market intelligence, quoted in USD.">
+<meta name="twitter:image" content="{{ request.url_root.rstrip('/') }}{{ url_for('static', filename='img/og-banner.png') }}">
+
 <link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='img/logo.png') }}">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -17,13 +30,13 @@
   --font-display:'Cormorant Garamond',serif; --font-body:'DM Sans',sans-serif;
 }
 * { box-sizing:border-box; margin:0; padding:0; }
-body { background:var(--dark); color:var(--white); font-family:var(--font-body); }
+html { overflow-x:hidden; }
+body { background:var(--dark); color:var(--white); font-family:var(--font-body); overflow-x:hidden; }
 a { text-decoration:none; }
 .nav { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 3rem;
-  border-bottom:1px solid var(--border); background:var(--black); position:sticky; top:0; z-index:10; flex-wrap:wrap; gap:1rem; }
+  border-bottom:1px solid var(--border); background:var(--black); position:sticky; top:0; z-index:20; gap:1rem; }
 .nav .brand { display:flex; align-items:center; gap:10px; }
 .nav .brand img { height:34px; }
-.nav .brand span { font-family:var(--font-display); font-size:1.3rem; font-weight:700; color:var(--bronze2); letter-spacing:1px; }
 .nav-links { display:flex; gap:2rem; align-items:center; }
 .nav-links a { color:var(--grey); font-size:13px; letter-spacing:.5px; text-transform:uppercase; font-weight:500; }
 .nav-links a:hover, .nav-links a.active { color:var(--bronze2); }
@@ -33,10 +46,30 @@ a { text-decoration:none; }
 .btn-primary:hover { background:var(--bronze2); }
 .btn-outline { background:transparent; color:var(--bronze2); border:1px solid var(--border); }
 .btn-outline:hover { border-color:var(--bronze); }
+.nav-toggle { display:none; background:none; border:none; padding:8px; cursor:pointer; }
+.nav-toggle span, .nav-toggle span::before, .nav-toggle span::after {
+  display:block; width:22px; height:2px; background:var(--bronze2); position:relative; transition:all .2s; }
+.nav-toggle span::before, .nav-toggle span::after { content:''; position:absolute; left:0; }
+.nav-toggle span::before { top:-7px; } .nav-toggle span::after { top:7px; }
+.mobile-menu { display:none; flex-direction:column; background:var(--black); border-bottom:1px solid var(--border);
+  padding:.5rem 1.2rem 1.2rem; position:sticky; top:64px; z-index:19; }
+.mobile-menu a { color:var(--grey); font-size:14px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+.mobile-menu a.active { color:var(--bronze2); }
+.mobile-menu .mobile-cta { display:flex; gap:.6rem; margin-top:1rem; }
+.mobile-menu .mobile-cta .btn { flex:1; text-align:center; padding:12px; border-bottom:none; }
+.mobile-menu .mobile-cta a.btn-primary { color:#141210; }
+.mobile-menu .mobile-cta a.btn-outline { color:var(--bronze2); }
 footer { padding:2.5rem 3rem; border-top:1px solid var(--border); color:var(--grey); font-size:12px;
   display:flex; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
 footer a { color:var(--grey); }
-@media (max-width:800px){ .nav{padding:1rem 1.2rem;} .nav-links{display:none;} footer{padding:1.5rem;} }
+@media (max-width:800px){
+  .nav{padding:.9rem 1.2rem;}
+  .nav-links{display:none;}
+  .nav-cta{display:none;}
+  .nav-toggle{display:block;}
+  .mobile-menu.open{display:flex;}
+  footer{padding:1.5rem;flex-direction:column;}
+}
 </style>
 {% block extra_css %}{% endblock %}
 </head>
@@ -52,6 +85,17 @@ footer a { color:var(--grey); }
     <a href="{{ url_for('public.contact') }}" class="{{ 'active' if request.endpoint=='public.contact' }}">Contact</a>
   </div>
   <div class="nav-cta">
+    <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Sign In</a>
+    <a href="{{ url_for('auth.signup') }}" class="btn btn-primary">Open an Account</a>
+  </div>
+  <button class="nav-toggle" onclick="document.getElementById('mobile-menu').classList.toggle('open')" aria-label="Menu"><span></span></button>
+</div>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="{{ url_for('public.home') }}" class="{{ 'active' if request.endpoint=='public.home' }}">Home</a>
+  <a href="{{ url_for('public.about') }}" class="{{ 'active' if request.endpoint=='public.about' }}">About</a>
+  <a href="{{ url_for('public.portfolio') }}" class="{{ 'active' if request.endpoint=='public.portfolio' }}">Portfolio</a>
+  <a href="{{ url_for('public.contact') }}" class="{{ 'active' if request.endpoint=='public.contact' }}">Contact</a>
+  <div class="mobile-cta">
     <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Sign In</a>
     <a href="{{ url_for('auth.signup') }}" class="btn btn-primary">Open an Account</a>
   </div>
