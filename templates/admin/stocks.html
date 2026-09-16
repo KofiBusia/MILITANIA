@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Live Prices — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Live Market Prices</h1><p>Global equities, refreshed automatically</p></div>
+  <a href="{{ url_for('admin.refresh_market_data') }}" class="btn btn-secondary">↻ Refresh Now</a>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Symbol</th><th>Name</th><th>Exchange</th><th class="text-right">Price (USD)</th><th class="text-right">Change %</th><th>Source</th><th>Updated</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for s in stocks %}
+        <tr>
+          <td class="mono" style="color:var(--bronze2);">{{ s.symbol }}</td>
+          <td>{{ s.name }}</td><td>{{ s.exchange }}</td>
+          <td class="num">{{ "{:,.2f}".format(s.price) if s.price else '—' }}</td>
+          <td class="num {{ 'text-green' if (s.change_pct or 0) >= 0 else 'text-red' }}">{{ "{:+.2f}".format(s.change_pct) if s.change_pct is not none else '—' }}%</td>
+          <td>{% if s.is_manual_override %}<span class="badge badge-pending">🔒 Manual</span>{% else %}<span style="color:var(--grey);font-size:11px;">Live</span>{% endif %}</td>
+          <td class="mono" style="color:var(--grey);font-size:11px;">{{ s.updated_at.strftime('%H:%M') if s.updated_at else '—' }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('admin.override_stock', stock_id=s.id) }}" class="flex gap-1">
+              <input type="number" step="0.01" name="price" placeholder="Manual price" style="width:100px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:5px;color:var(--white);padding:5px 8px;font-size:11px;">
+              <button class="btn btn-secondary btn-sm">Set</button>
+            </form>
+            {% if s.is_manual_override %}
+            <form method="POST" action="{{ url_for('admin.resume_live_price', stock_id=s.id) }}" style="display:inline;"><button class="btn btn-primary btn-sm">Resume Live</button></form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'public/base_public.html' %}
+{% block title %}Open an Account — Militania Investment{% endblock %}
+{% block extra_css %}
+<style>
+.signup-wrap { max-width:600px; margin:3rem auto 4rem; padding:0 1.2rem; }
+.signup-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:2rem; }
+.signup-card h1 { font-family:var(--font-display); font-size:1.9rem; margin-bottom:.4rem; }
+.signup-card p.sub { color:var(--grey); font-size:13px; margin-bottom:1.6rem; }
+.form-field { margin-bottom:1.1rem; }
+.form-field label { display:block; font-size:10.5px; color:var(--grey); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
+.form-field input, .form-field select, .form-field textarea {
+  width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:6px;
+  color:var(--white); padding:10px 13px; font-size:14px; font-family:var(--font-body); outline:none; }
+.form-field input:focus, .form-field select:focus { border-color:var(--bronze); }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:0 1rem; }
+.alert-msg { padding:11px 15px; border-radius:8px; font-size:12.5px; margin-bottom:1rem; }
+.alert-success { background:rgba(76,175,109,0.12); color:#4CAF6D; border:1px solid rgba(76,175,109,0.3); }
+.alert-danger { background:rgba(225,92,92,0.12); color:#E15C5C; border:1px solid rgba(225,92,92,0.3); }
+@media (max-width:700px){ .form-grid{grid-template-columns:1fr;} }
+</style>
+{% endblock %}
+{% block content %}
+<div class="signup-wrap">
+  <div class="signup-card">
+    <h1>Open an Account</h1>
+    <p class="sub">Submit your details below — an administrator will review and approve your application.</p>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="alert-msg alert-{{ 'success' if cat=='success' else 'danger' }}">{{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+    <form method="POST">
+      <div class="form-grid">
+        <div class="form-field"><label>Full Name *</label><input type="text" name="full_name" required></div>
+        <div class="form-field"><label>Phone Number *</label><input type="text" name="phone" required></div>
+        <div class="form-field"><label>Email Address</label><input type="email" name="email"></div>
+        <div class="form-field"><label>Country</label><input type="text" name="country"></div>
+        <div class="form-field">
+          <label>Risk Profile</label>
+          <select name="risk_profile">
+            <option value="Conservative">Conservative</option>
+            <option value="Moderate" selected>Moderate</option>
+            <option value="Aggressive">Aggressive</option>
+          </select>
+        </div>
+        <div class="form-field"><label>Investment Objective</label><input type="text" name="investment_objective" placeholder="e.g. Long-term growth"></div>
+      </div>
+      <button type="submit" class="btn btn-primary full-width" style="width:100%;justify-content:center;margin-top:.6rem;">Submit Application</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

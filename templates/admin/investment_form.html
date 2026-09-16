@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}New Investment — Militania{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>New Investment</h1></div><a href="{{ url_for('admin.investments') }}" class="btn btn-secondary">← Back</a></div>
+<div class="card" style="max-width:800px;">
+  <form method="POST">
+    <div class="form-grid-2">
+      <div class="form-group"><label>Account Number *</label>
+        <select name="account_number" required>
+          {% for a in accounts %}<option value="{{ a.account_number }}">{{ a.account_number }} — {{ a.full_name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Asset Class *</label>
+        <select name="asset_class" required>
+          {% for c in asset_classes %}<option value="{{ c }}">{{ c.replace('_',' ') }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Symbol</label><input type="text" name="symbol" placeholder="e.g. AAPL"></div>
+      <div class="form-group"><label>Security Name</label><input type="text" name="security_name"></div>
+      <div class="form-group"><label>Issuer</label><input type="text" name="issuer"></div>
+      <div class="form-group"><label>Sector</label><input type="text" name="sector"></div>
+      <div class="form-group"><label>Exchange</label><input type="text" name="exchange" placeholder="e.g. NASDAQ"></div>
+      <div class="form-group"><label>Trade Date</label><input type="date" name="trade_date"></div>
+      <div class="form-group"><label>Quantity</label><input type="number" step="0.0001" name="quantity"></div>
+      <div class="form-group"><label>Unit Cost (USD)</label><input type="number" step="0.0001" name="unit_cost"></div>
+      <div class="form-group"><label>Total Cost (USD)</label><input type="number" step="0.01" name="total_cost"></div>
+      <div class="form-group"><label>Current Price (USD)</label><input type="number" step="0.0001" name="current_price"></div>
+      <div class="form-group"><label>Face Value (USD)</label><input type="number" step="0.01" name="face_value"></div>
+      <div class="form-group"><label>Interest Rate %</label><input type="number" step="0.01" name="interest_rate"></div>
+      <div class="form-group"><label>Coupon Rate %</label><input type="number" step="0.01" name="coupon_rate"></div>
+      <div class="form-group"><label>Tenor (days)</label><input type="number" name="tenor"></div>
+      <div class="form-group"><label>Maturity Date</label><input type="date" name="maturity_date"></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Investment</button>
+  </form>
+</div>
+{% endblock %}

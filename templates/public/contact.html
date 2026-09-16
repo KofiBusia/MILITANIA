@@ -1,0 +1,29 @@
+{% extends 'public/base_public.html' %}
+{% block title %}Contact — Militania Investment{% endblock %}
+{% block extra_css %}
+<style>
+.page-hero { padding:4rem 3rem 2rem; text-align:center; }
+.page-hero h1 { font-family:var(--font-display); font-size:2.6rem; font-weight:400; }
+.contact-grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; max-width:900px; margin:0 auto 4rem; padding:0 3rem; }
+.contact-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.8rem; }
+.contact-card h3 { font-family:var(--font-display); color:var(--bronze2); font-size:1.2rem; margin-bottom:.7rem; }
+.contact-card p { color:var(--grey); font-size:13.5px; line-height:1.9; }
+.contact-card a { color:var(--bronze2); }
+@media (max-width:800px){ .contact-grid{grid-template-columns:1fr; padding:0 1.2rem;} }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-hero"><h1>Get in Touch</h1></div>
+<div class="contact-grid">
+  <div class="contact-card">
+    <h3>Client Services</h3>
+    <p>For account inquiries, statements, or general questions about your portfolio:<br>
+    <a href="mailto:support@militania.invest">support@militania.invest</a></p>
+  </div>
+  <div class="contact-card">
+    <h3>New Accounts</h3>
+    <p>Ready to start? <a href="{{ url_for('auth.signup') }}">Open an account</a> and our team
+    will review your application shortly.</p>
+  </div>
+</div>
+{% endblock %}

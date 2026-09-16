@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% block title %}My Portfolio — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>My Portfolio</h1><p>{{ acc.account_number }} &middot; {{ acc.account_type }} &middot;
+    <span class="badge badge-{{ 'approved' if acc.status=='APPROVED' else 'pending' }}">{{ acc.status }}</span></p></div>
+  <div class="flex gap-1">
+    <a href="{{ url_for('reports.pvr', account_number=acc.account_number) }}" target="_blank" class="btn btn-secondary btn-sm">📄 View Report</a>
+    <a href="{{ url_for('reports.pvr', account_number=acc.account_number, download=1) }}" class="btn btn-primary btn-sm">↓ Download PDF</a>
+  </div>
+</div>
+<div class="grid grid-3 mb-2">
+  <div class="card" style="border-top:2px solid var(--bronze);">
+    <div class="card-title">Total Portfolio</div>
+    <div class="stat-value bronze-value">${{ "{:,.2f}".format(portfolio_value) }}</div>
+    <div class="stat-sub">USD · Approved only</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Investments (Mkt Value)</div>
+    <div class="stat-value" style="color:var(--green);">${{ "{:,.2f}".format(total_value) }}</div>
+    <div class="stat-sub">{{ investments|length }} approved holding(s)</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Available Cash</div>
+    <div class="stat-value">${{ "{:,.2f}".format(cash) }}</div>
+    <div class="stat-sub">USD · Available to invest</div>
+  </div>
+</div>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for cat, msg in messages %}{% endfor %}{% endwith %}
+{% if by_class %}
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:1rem;">Asset Allocation</div>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    {% for cls, val in by_class.items()|sort(attribute='1', reverse=true) %}
+    {% set pct = (val / portfolio_value * 100) if portfolio_value else 0 %}
+    <div>
+      <div class="flex" style="justify-content:space-between;font-size:11px;margin-bottom:3px;">
+        <span style="color:var(--grey);">{{ cls }}</span><span class="mono">${{ "{:,.2f}".format(val) }} ({{ "{:.1f}".format(pct) }}%)</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.06);border-radius:3px;height:6px;">
+        <div style="background:var(--bronze);width:{{ pct }}%;height:100%;border-radius:3px;"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:.8rem;">Quick Actions</div>
+  <div class="flex gap-1">
+    <a href="{{ url_for('user.requests_page') }}" class="btn btn-primary btn-sm">+ New Request</a>
+    <a href="{{ url_for('user.statement') }}" class="btn btn-secondary btn-sm">Statement</a>
+  </div>
+</div>
+{% if investments %}
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:1rem;">Investment Holdings</div>
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr><th>Asset Class</th><th>Security</th><th>Trade Date</th><th class="text-right">Mkt Value (USD)</th></tr></thead>
+    <tbody>{% for inv in investments %}<tr>
+      <td><span class="badge badge-pending">{{ inv.asset_class.replace('_',' ') }}</span></td>
+      <td>{{ inv.security_name or inv.issuer or inv.symbol or '—' }}</td>
+      <td class="mono">{{ inv.trade_date.strftime('%d %b %Y') if inv.trade_date else '—' }}</td>
+      <td class="num bronze-value">{{ "{:,.2f}".format(inv.computed_mkt_value) }}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% else %}
+<div class="card mb-2"><p style="color:var(--grey);font-size:12px;">No investments yet. Submit a request to get started.</p></div>
+{% endif %}
+<div class="card">
+  <div class="flex" style="justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <div class="card-title">Recent Transactions</div>
+    <a href="{{ url_for('user.statement') }}" style="font-size:11px;">Full Statement →</a>
+  </div>
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr><th>Date</th><th>Type</th><th class="text-right">Amount (USD)</th></tr></thead>
+    <tbody>{% for t in transactions %}<tr>
+      <td class="mono">{{ t.txn_date.strftime('%d %b %Y') }}</td>
+      <td><span class="badge badge-{{ 'approved' if t.txn_type in ['DEPOSIT','TRANSFER_IN'] else 'pending' }}">{{ t.txn_type.replace('_',' ') }}</span></td>
+      <td class="num">{{ "{:,.2f}".format(t.amount) }}</td>
+    </tr>{% else %}<tr><td colspan="3" style="text-align:center;color:var(--grey);padding:2rem;">No transactions yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

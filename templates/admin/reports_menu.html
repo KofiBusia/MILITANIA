@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block title %}Report Centre — Militania{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>Report Centre</h1><p>Generate and download professional reports</p></div></div>
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:1rem;">Portfolio Valuation Report (PVR) — Individual Account</div>
+  <div class="flex gap-1" style="flex-wrap:wrap;align-items:flex-end;">
+    <div class="form-group" style="flex:1;min-width:250px;margin-bottom:0;">
+      <label>Select Account</label>
+      <select id="pvr-acc">
+        <option value="">— Select Account —</option>
+        {% for acc in accounts %}<option value="{{ acc.account_number }}">{{ acc.account_number }} — {{ acc.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <button onclick="viewPVR()" class="btn btn-secondary">👁 View</button>
+    <button onclick="downloadPVR()" class="btn btn-primary">↓ Download PDF</button>
+  </div>
+</div>
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:1rem;">Transaction Statement</div>
+  <div class="flex gap-1" style="flex-wrap:wrap;align-items:flex-end;">
+    <div class="form-group" style="flex:1;min-width:250px;margin-bottom:0;">
+      <label>Select Account</label>
+      <select id="stmt-acc">
+        <option value="">— Select Account —</option>
+        {% for acc in accounts %}<option value="{{ acc.account_number }}">{{ acc.account_number }} — {{ acc.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:0;"><label>From</label><input type="date" id="stmt-from"></div>
+    <div class="form-group" style="margin-bottom:0;"><label>To</label><input type="date" id="stmt-to"></div>
+    <button onclick="viewStatement()" class="btn btn-secondary">👁 View</button>
+    <button onclick="downloadStatement()" class="btn btn-primary">↓ Download PDF</button>
+  </div>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom:1rem;">Global / System-Wide Reports</div>
+  <div class="flex gap-1" style="flex-wrap:wrap;">
+    <a href="{{ url_for('reports.global_report') }}" target="_blank" class="btn btn-secondary">📊 Global AUM Report (All)</a>
+    {% for cls in asset_classes %}
+    <a href="{{ url_for('reports.global_report', asset_class=cls) }}" target="_blank" class="btn btn-secondary btn-sm">{{ asset_labels[cls] }}</a>
+    {% endfor %}
+  </div>
+</div>
+<script>
+function viewPVR() {
+  const acc = document.getElementById('pvr-acc').value;
+  if (!acc) { alert('Please select an account'); return; }
+  window.open(`/reports/pvr/${acc}`, '_blank');
+}
+function downloadPVR() {
+  const acc = document.getElementById('pvr-acc').value;
+  if (!acc) { alert('Please select an account'); return; }
+  window.location.href = `/reports/pvr/${acc}?download=1`;
+}
+function viewStatement() {
+  const acc = document.getElementById('stmt-acc').value;
+  const from = document.getElementById('stmt-from').value;
+  const to = document.getElementById('stmt-to').value;
+  if (!acc) { alert('Please select an account'); return; }
+  let url = `/reports/statement/${acc}?`;
+  if (from) url += `from=${from}&`;
+  if (to) url += `to=${to}`;
+  window.open(url, '_blank');
+}
+function downloadStatement() {
+  const acc = document.getElementById('stmt-acc').value;
+  const from = document.getElementById('stmt-from').value;
+  const to = document.getElementById('stmt-to').value;
+  if (!acc) { alert('Please select an account'); return; }
+  let url = `/reports/statement/${acc}?download=1&`;
+  if (from) url += `from=${from}&`;
+  if (to) url += `to=${to}`;
+  window.location.href = url;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Militania Investment{% endblock %}</title>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black: #0D0D0D; --dark: #171717; --dark2: #211C18;
+  --bronze: #A9815E; --bronze2: #D3B18A; --white: #F5F0EA;
+  --grey: #9A9184; --surface: #1B1815; --border: rgba(169,129,94,0.22);
+  --red: #E15C5C; --green: #4CAF6D;
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+  --radius: 10px;
+}
+* { box-sizing: border-box; }
+body { margin:0; background: var(--dark); color: var(--white); font-family: var(--font-body); min-height:100vh; }
+a { color: var(--bronze); }
+.layout { display:flex; min-height:100vh; }
+.sidebar {
+  width: 230px; background: var(--black); border-right: 1px solid var(--border);
+  padding: 1.4rem 1rem; position: sticky; top:0; height:100vh; overflow-y:auto;
+}
+.sidebar .brand { display:flex; align-items:center; gap:10px; margin-bottom:2rem; padding:0 .3rem; }
+.sidebar .brand img { width:34px; height:34px; object-fit:contain; }
+.sidebar .brand span { font-family: var(--font-display); font-weight:700; color: var(--bronze2); font-size:1.15rem; letter-spacing:1px; }
+.nav-group { margin-bottom:1.3rem; }
+.nav-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--grey); padding:0 .6rem; margin-bottom:.4rem; }
+.nav-link {
+  display:flex; align-items:center; gap:9px; padding:9px 12px; border-radius:8px;
+  color: var(--grey); text-decoration:none; font-size:13px; margin-bottom:2px; transition:all .15s;
+}
+.nav-link:hover { background: rgba(169,129,94,0.08); color: var(--white); }
+.nav-link.active { background: rgba(169,129,94,0.15); color: var(--bronze2); font-weight:600; }
+.main { flex:1; min-width:0; }
+.topbar {
+  display:flex; justify-content:space-between; align-items:center; padding: 1rem 1.6rem;
+  border-bottom:1px solid var(--border); background: var(--dark);
+}
+.topbar .who { font-size:12px; color:var(--grey); }
+.topbar .who b { color: var(--bronze2); }
+.page-content { padding: 1.6rem; max-width: 1400px; }
+.page-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.4rem; flex-wrap:wrap; gap:1rem; }
+.page-header h1 { font-family:var(--font-display); font-size:1.9rem; margin:0 0 .2rem; color:var(--white); }
+.page-header p { color:var(--grey); font-size:13px; margin:0; }
+.card { background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding:1.2rem 1.4rem; }
+.mb-2 { margin-bottom:1.2rem; }
+.grid { display:grid; gap:1rem; }
+.grid-2 { grid-template-columns:1fr 1fr; }
+.grid-3 { grid-template-columns:repeat(3,1fr); }
+.grid-4 { grid-template-columns:repeat(4,1fr); }
+@media (max-width:900px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr 1fr; } .sidebar{ display:none; } }
+.card-title { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--grey); margin-bottom:.5rem; }
+.stat-value { font-family:var(--font-display); font-size:2rem; font-weight:600; color:var(--white); }
+.bronze-value { color: var(--bronze2); }
+.stat-sub { font-size:11px; color:var(--grey); margin-top:4px; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:9px 16px; border-radius:7px; border:none;
+  font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:none; font-family:var(--font-body); }
+.btn-primary { background: var(--bronze); color:#141210; }
+.btn-primary:hover { background: var(--bronze2); }
+.btn-secondary { background: rgba(255,255,255,0.05); color:var(--white); border:1px solid var(--border); }
+.btn-secondary:hover { background: rgba(255,255,255,0.09); }
+.btn-sm { padding:6px 11px; font-size:11.5px; }
+.full-width { width:100%; justify-content:center; }
+.flex { display:flex; } .gap-1{gap:.6rem;} .gap-2{gap:1rem;}
+.table-wrap { overflow-x:auto; }
+.data-table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.data-table th { text-align:left; font-size:10.5px; letter-spacing:.5px; text-transform:uppercase;
+  color:var(--grey); padding:8px 10px; border-bottom:1px solid var(--border); }
+.data-table td { padding:9px 10px; border-bottom:1px solid rgba(255,255,255,0.04); }
+.data-table .num { text-align:right; font-family:var(--font-mono); }
+.text-right{text-align:right;}
+.mono { font-family: var(--font-mono); }
+.text-green{color:var(--green);} .text-red{color:var(--red);}
+.badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:10.5px; font-weight:600; }
+.badge-approved { background:rgba(76,175,109,0.15); color:var(--green); }
+.badge-pending { background:rgba(169,129,94,0.18); color:var(--bronze2); }
+.badge-rejected { background:rgba(225,92,92,0.15); color:var(--red); }
+.form-group { margin-bottom:1rem; }
+.form-group label { display:block; font-size:11px; color:var(--grey); margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px; }
+.form-group input, .form-group select, .form-group textarea {
+  width:100%; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:6px;
+  color:var(--white); padding:9px 12px; font-size:13px; font-family:var(--font-body); outline:none;
+}
+.form-group input:focus, .form-group select:focus { border-color:var(--bronze); }
+.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:0 1.2rem; }
+.alert { padding:11px 15px; border-radius:8px; font-size:12.5px; margin-bottom:1rem; }
+.alert-success { background:rgba(76,175,109,0.12); color:var(--green); border:1px solid rgba(76,175,109,0.3); }
+.alert-danger { background:rgba(225,92,92,0.12); color:var(--red); border:1px solid rgba(225,92,92,0.3); }
+.alert-info { background:rgba(169,129,94,0.1); color:var(--bronze2); border:1px solid var(--border); }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Militania">
+      <span>MILITANIA</span>
+    </div>
+    {% if session.get('user_type') == 'admin' %}
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a class="nav-link {{ 'active' if request.endpoint=='admin.dashboard' }}" href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Portfolio Management</div>
+      <a class="nav-link {{ 'active' if request.endpoint and request.endpoint.startswith('admin.accounts') or request.endpoint=='admin.view_account' or request.endpoint=='admin.new_account' }}" href="{{ url_for('admin.accounts') }}">Accounts</a>
+      <a class="nav-link {{ 'active' if request.endpoint and 'investment' in request.endpoint }}" href="{{ url_for('admin.investments') }}">Investments</a>
+      <a class="nav-link {{ 'active' if request.endpoint and 'transaction' in request.endpoint }}" href="{{ url_for('admin.transactions') }}">Transactions</a>
+      <a class="nav-link {{ 'active' if request.endpoint=='admin.client_requests' }}" href="{{ url_for('admin.client_requests') }}">Requests</a>
+      <a class="nav-link {{ 'active' if request.endpoint=='reports.menu' }}" href="{{ url_for('reports.menu') }}">Reports</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Markets</div>
+      <a class="nav-link {{ 'active' if request.endpoint=='admin.stocks' }}" href="{{ url_for('admin.stocks') }}">Live Prices</a>
+    </div>
+    {% if current_user.is_super_admin %}
+    <div class="nav-group">
+      <div class="nav-label">Administration</div>
+      <a class="nav-link {{ 'active' if request.endpoint and 'admin_user' in request.endpoint }}" href="{{ url_for('admin.admin_users') }}">Staff</a>
+    </div>
+    {% endif %}
+    {% elif session.get('user_type') == 'client' %}
+    <div class="nav-group">
+      <div class="nav-label">My Portfolio</div>
+      <a class="nav-link {{ 'active' if request.endpoint=='user.dashboard' }}" href="{{ url_for('user.dashboard') }}">Dashboard</a>
+      <a class="nav-link {{ 'active' if request.endpoint=='user.statement' }}" href="{{ url_for('user.statement') }}">Statement</a>
+      <a class="nav-link {{ 'active' if request.endpoint=='user.requests_page' }}" href="{{ url_for('user.requests_page') }}">Requests</a>
+    </div>
+    {% endif %}
+    <div class="nav-group">
+      <div class="nav-label">Account</div>
+      {% if session.get('user_type') == 'admin' %}
+      <a class="nav-link" href="{{ url_for('admin.change_password') }}">Change Password</a>
+      {% elif session.get('user_type') == 'client' %}
+      <a class="nav-link" href="{{ url_for('user.change_password') }}">Change Password</a>
+      {% endif %}
+      <a class="nav-link" href="{{ url_for('auth.logout') }}">Sign Out</a>
+      <a class="nav-link" href="{{ url_for('public.home') }}">← Public Site</a>
+    </div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div></div>
+      <div class="who">Signed in as <b>{{ current_user.full_name if current_user.is_authenticated else '' }}</b></div>
+    </div>
+    <div class="page-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}
+        <div class="alert alert-{{ 'success' if cat=='success' else 'danger' if cat=='error' else 'info' }}">{{ msg|safe }}</div>
+        {% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

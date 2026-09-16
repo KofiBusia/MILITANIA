@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Staff — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Staff Management</h1><p>{{ users|length }} staff member(s)</p></div>
+  <a href="{{ url_for('admin.new_admin_user') }}" class="btn btn-primary">+ Add Staff</a>
+</div>
+<div class="card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Staff ID</th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Password</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="mono" style="color:var(--bronze2);">{{ u.staff_id }}</td>
+          <td>{{ u.full_name }}</td>
+          <td style="color:var(--grey);">{{ u.email }}</td>
+          <td><span class="badge badge-{{ 'approved' if u.role=='SUPER_ADMIN' else 'pending' }}">{{ u.role.replace('_',' ') }}</span></td>
+          <td><span class="badge badge-{{ 'approved' if u.is_active else 'rejected' }}">{{ 'Active' if u.is_active else 'Inactive' }}</span></td>
+          <td>{% if u.must_change_password %}<span class="badge badge-pending">Must change</span>{% else %}<span style="color:var(--grey);font-size:11px;">OK</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

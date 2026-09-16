@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Dashboard</h1><p>Welcome back, {{ current_user.full_name }}</p></div>
+  <div class="flex gap-1">
+    <a href="{{ url_for('admin.new_account') }}" class="btn btn-secondary btn-sm">+ Account</a>
+    <a href="{{ url_for('admin.new_investment') }}" class="btn btn-primary btn-sm">+ Investment</a>
+  </div>
+</div>
+<div class="grid grid-4 mb-2">
+  <div class="card" style="border-top:2px solid var(--bronze);">
+    <div class="card-title">Total AUM (USD)</div>
+    <div class="stat-value bronze-value">${{ "{:,.0f}".format(total_aum) }}</div>
+    <div class="stat-sub">Investments + Cash</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Active Accounts</div>
+    <div class="stat-value">{{ total_accounts }}</div>
+    <div class="stat-sub">
+      {% if pending_accounts %}<a href="{{ url_for('admin.accounts') }}?status=PENDING">{{ pending_accounts }} pending</a>{% else %}All approved{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Investments</div>
+    <div class="stat-value">{{ total_investments }}</div>
+    <div class="stat-sub">
+      {% if pending_investments %}<a href="{{ url_for('admin.investments') }}?status=PENDING">{{ pending_investments }} pending</a>{% else %}All approved{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Valuation Date</div>
+    <div class="stat-value" style="font-size:1.5rem;">{{ now.strftime('%d %b %Y') }}</div>
+    <div class="stat-sub">Live market data</div>
+  </div>
+</div>
+
+{% if pending_transactions or pending_requests %}
+<div class="grid grid-2 mb-2">
+  {% if pending_transactions %}
+  <div class="card" style="border-left:3px solid var(--bronze);">
+    <div class="flex" style="align-items:center;gap:.7rem;">
+      <div><div class="stat-value" style="font-size:1.4rem;">{{ pending_transactions }}</div>
+      <div class="stat-sub">Transaction(s) pending approval</div></div>
+      <a href="{{ url_for('admin.transactions') }}?status=PENDING" class="btn btn-secondary btn-sm" style="margin-left:auto;">Review →</a>
+    </div>
+  </div>
+  {% endif %}
+  {% if pending_requests %}
+  <div class="card" style="border-left:3px solid var(--bronze);">
+    <div class="flex" style="align-items:center;gap:.7rem;">
+      <div><div class="stat-value" style="font-size:1.4rem;">{{ pending_requests }}</div>
+      <div class="stat-sub">Client request(s) awaiting action</div></div>
+      <a href="{{ url_for('admin.client_requests') }}?status=PENDING" class="btn btn-secondary btn-sm" style="margin-left:auto;">Review →</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if fx %}
+<div class="card mb-2" style="font-size:11px;color:var(--grey);">
+  <span style="color:var(--bronze2);font-weight:600;">Live FX (1 USD → ccy):</span>
+  {% for ccy, info in fx.items() %}{% if ccy != 'USD' %}
+  <span style="margin-left:1.2rem;"><strong style="color:var(--white);">{{ ccy }}</strong> {{ "{:,.4f}".format(info.rate) }}
+  <span style="color:var(--grey);">· {{ info.updated }}</span></span>
+  {% endif %}{% endfor %}
+  <a href="{{ url_for('admin.refresh_market_data') }}" style="float:right;">↻ Refresh</a>
+</div>
+{% endif %}
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title" style="margin-bottom:1rem;">AUM by Asset Class</div>
+    {% if by_class %}
+    {% set tot = namespace(v=0) %}
+    {% for cls, val in by_class.items() %}{% set tot.v = tot.v + val %}{% endfor %}
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for cls, val in by_class.items()|sort(attribute='1', reverse=true) %}
+      {% set pct = (val / tot.v * 100) if tot.v else 0 %}
+      <div>
+        <div class="flex" style="justify-content:space-between;font-size:11px;margin-bottom:3px;">
+          <span style="color:var(--grey);">{{ cls }}</span>
+          <span class="mono">${{ "{:,.0f}".format(val) }} — {{ "{:.1f}".format(pct) }}%</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.06);border-radius:3px;height:6px;">
+          <div style="background:var(--bronze);width:{{ pct }}%;height:100%;border-radius:3px;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<p style="color:var(--grey);font-size:12px;">No investments recorded yet.</p>{% endif %}
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:.8rem;">Quick Actions</div>
+    <div class="flex" style="flex-wrap:wrap;gap:8px;">
+      <a href="{{ url_for('admin.new_account') }}" class="btn btn-secondary btn-sm">+ Account</a>
+      <a href="{{ url_for('admin.new_investment') }}" class="btn btn-secondary btn-sm">+ Investment</a>
+      <a href="{{ url_for('admin.new_transaction') }}" class="btn btn-secondary btn-sm">+ Transaction</a>
+      <a href="{{ url_for('reports.menu') }}" class="btn btn-primary btn-sm">📄 Reports</a>
+      <a href="{{ url_for('admin.client_requests') }}?status=PENDING" class="btn btn-secondary btn-sm">📬 Requests</a>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-2" style="margin-top:1.2rem;">
+  <div class="flex" style="justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <div class="card-title">Recent Transactions</div>
+    <a href="{{ url_for('admin.transactions') }}" style="font-size:11px;">View All →</a>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Account</th><th>Type</th><th>Description</th><th class="text-right">Amount (USD)</th></tr></thead>
+      <tbody>
+        {% for t in recent_txns %}
+        <tr>
+          <td class="mono">{{ t.txn_date.strftime('%d %b %Y') }}</td>
+          <td><a href="{{ url_for('admin.view_account', acc_id=t.account.id) }}">{{ t.account_number }}</a></td>
+          <td><span class="badge badge-{{ 'approved' if t.txn_type in ['DEPOSIT','TRANSFER_IN'] else 'pending' }}">{{ t.txn_type }}</span></td>
+          <td style="color:var(--grey);">{{ t.description or '—' }}</td>
+          <td class="num {{ 'text-green' if t.txn_type in ['DEPOSIT','TRANSFER_IN','DIVIDEND'] else 'text-red' }}">{{ "{:,.2f}".format(t.amount) }}</td>
+        </tr>
+        {% else %}<tr><td colspan="5" style="text-align:center;color:var(--grey);padding:2rem;">No transactions yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

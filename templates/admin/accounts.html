@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Accounts — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Accounts</h1><p>{{ accounts|length }} account(s)</p></div>
+  <a href="{{ url_for('admin.new_account') }}" class="btn btn-primary">+ New Account</a>
+</div>
+<div class="card">
+  <form method="GET" class="flex gap-1" style="margin-bottom:1rem;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search account # or name" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--white);padding:8px 12px;">
+    <select name="status" style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--white);padding:8px 12px;">
+      <option value="">All Status</option>
+      <option value="PENDING" {{ 'selected' if status=='PENDING' }}>Pending</option>
+      <option value="APPROVED" {{ 'selected' if status=='APPROVED' }}>Approved</option>
+      <option value="SUSPENDED" {{ 'selected' if status=='SUSPENDED' }}>Suspended</option>
+    </select>
+    <button class="btn btn-secondary">Filter</button>
+  </form>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Account No.</th><th>Name</th><th>Type</th><th>Country</th><th>Status</th><th>Opened</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for acc in accounts %}
+        <tr>
+          <td class="mono" style="color:var(--bronze2);">{{ acc.account_number }}</td>
+          <td>{{ acc.full_name }}</td>
+          <td>{{ acc.account_type }}</td>
+          <td style="color:var(--grey);">{{ acc.country or '—' }}</td>
+          <td><span class="badge badge-{{ 'approved' if acc.status=='APPROVED' else 'rejected' if acc.status=='SUSPENDED' else 'pending' }}">{{ acc.status }}</span></td>
+          <td class="mono" style="color:var(--grey);font-size:11px;">{{ acc.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <a href="{{ url_for('admin.view_account', acc_id=acc.id) }}" class="btn btn-secondary btn-sm">View</a>
+            {% if acc.status == 'PENDING' %}
+            <form method="POST" action="{{ url_for('admin.approve_account', acc_id=acc.id) }}" style="display:inline;">
+              <button class="btn btn-primary btn-sm">Approve</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}<tr><td colspan="7" style="text-align:center;color:var(--grey);padding:2rem;">No accounts found.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

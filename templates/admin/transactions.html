@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Transactions — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Transactions</h1><p>{{ transactions|length }} record(s)</p></div>
+  <a href="{{ url_for('admin.new_transaction') }}" class="btn btn-primary">+ New Transaction</a>
+</div>
+<div class="card">
+  <form method="GET" class="flex gap-1" style="margin-bottom:1rem;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search account #" style="flex:1;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--white);padding:8px 12px;">
+    <select name="status" style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:6px;color:var(--white);padding:8px 12px;">
+      <option value="">All Status</option>
+      <option value="PENDING" {{ 'selected' if status=='PENDING' }}>Pending</option>
+      <option value="APPROVED" {{ 'selected' if status=='APPROVED' }}>Approved</option>
+    </select>
+    <button class="btn btn-secondary">Filter</button>
+  </form>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>Date</th><th>Account</th><th>Type</th><th class="text-right">Amount (USD)</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td class="mono">{{ t.txn_date.strftime('%d %b %Y') }}</td>
+          <td class="mono" style="color:var(--bronze2);">{{ t.account_number }}</td>
+          <td>{{ t.txn_type.replace('_',' ') }}</td>
+          <td class="num">{{ "{:,.2f}".format(t.amount) }}</td>
+          <td><span class="badge badge-{{ 'approved' if t.status=='APPROVED' else 'pending' }}">{{ t.status }}</span></td>
+          <td>{% if t.status == 'PENDING' %}
+            <form method="POST" action="{{ url_for('admin.approve_transaction', txn_id=t.id) }}"><button class="btn btn-primary btn-sm">Approve</button></form>
+          {% endif %}</td>
+        </tr>
+        {% else %}<tr><td colspan="6" style="text-align:center;color:var(--grey);padding:2rem;">No transactions found.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

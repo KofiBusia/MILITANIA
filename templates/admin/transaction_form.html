@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}New Transaction — Militania{% endblock %}
+{% block content %}
+<div class="page-header"><div><h1>New Transaction</h1></div><a href="{{ url_for('admin.transactions') }}" class="btn btn-secondary">← Back</a></div>
+<div class="card" style="max-width:600px;">
+  <form method="POST">
+    <div class="form-group"><label>Account Number *</label>
+      <select name="account_number" required>
+        {% for a in accounts %}<option value="{{ a.account_number }}">{{ a.account_number }} — {{ a.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group"><label>Transaction Type *</label>
+      <select name="txn_type" required>
+        <option value="DEPOSIT">Deposit</option><option value="WITHDRAWAL">Withdrawal</option>
+        <option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
+        <option value="FEE">Fee</option><option value="DIVIDEND">Dividend</option><option value="COUPON">Coupon</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Amount (USD) *</label><input type="number" step="0.01" name="amount" required></div>
+    <div class="form-group"><label>Transaction Date</label><input type="date" name="txn_date"></div>
+    <div class="form-group"><label>Description</label><input type="text" name="description"></div>
+    <button type="submit" class="btn btn-primary">Save Transaction</button>
+  </form>
+</div>
+{% endblock %}

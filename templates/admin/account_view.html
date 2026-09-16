@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}{{ acc.full_name }} — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>{{ acc.full_name }}</h1><p>{{ acc.account_number }} &middot; {{ acc.account_type }} &middot;
+    <span class="badge badge-{{ 'approved' if acc.status=='APPROVED' else 'pending' }}">{{ acc.status }}</span></p></div>
+  <div class="flex gap-1">
+    <a href="{{ url_for('reports.pvr', account_number=acc.account_number) }}" target="_blank" class="btn btn-secondary">📄 PVR</a>
+    <a href="{{ url_for('reports.statement', account_number=acc.account_number) }}" target="_blank" class="btn btn-secondary">📋 Statement</a>
+  </div>
+</div>
+{% set total_inv = investments|sum(attribute='computed_mkt_value') %}
+<div class="grid grid-3 mb-2">
+  <div class="card"><div class="card-title">Cash Balance</div><div class="stat-value bronze-value">${{ "{:,.2f}".format(acc.cash_balance) }}</div></div>
+  <div class="card"><div class="card-title">Investments (Mkt Value)</div><div class="stat-value">${{ "{:,.2f}".format(total_inv) }}</div></div>
+  <div class="card"><div class="card-title">Total Portfolio</div><div class="stat-value bronze-value">${{ "{:,.2f}".format(acc.cash_balance + total_inv) }}</div></div>
+</div>
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:.8rem;">Contact</div>
+  <p style="font-size:12.5px;color:var(--grey);">Email: {{ acc.email or '—' }} &middot; Phone: {{ acc.phone or '—' }} &middot; Country: {{ acc.country or '—' }}</p>
+</div>
+{% if pending_invs %}
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:.8rem;">Pending Investments</div>
+  <table class="data-table"><thead><tr><th>Asset Class</th><th>Security</th><th class="text-right">Cost (USD)</th><th>Action</th></tr></thead>
+  <tbody>{% for i in pending_invs %}<tr>
+    <td>{{ i.asset_class.replace('_',' ') }}</td><td>{{ i.security_name or i.issuer or '—' }}</td>
+    <td class="num">{{ "{:,.2f}".format(i.total_cost or 0) }}</td>
+    <td><form method="POST" action="{{ url_for('admin.approve_investment', inv_id=i.id) }}"><button class="btn btn-primary btn-sm">Approve</button></form></td>
+  </tr>{% endfor %}</tbody></table>
+</div>
+{% endif %}
+<div class="card mb-2">
+  <div class="card-title" style="margin-bottom:.8rem;">Holdings</div>
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr><th>Asset Class</th><th>Security</th><th>Trade Date</th><th class="text-right">Mkt Value (USD)</th></tr></thead>
+    <tbody>{% for i in investments %}<tr>
+      <td>{{ i.asset_class.replace('_',' ') }}</td><td>{{ i.security_name or i.issuer or i.symbol or '—' }}</td>
+      <td class="mono">{{ i.trade_date.strftime('%d %b %Y') if i.trade_date else '—' }}</td>
+      <td class="num bronze-value">{{ "{:,.2f}".format(i.computed_mkt_value) }}</td>
+    </tr>{% else %}<tr><td colspan="4" style="text-align:center;color:var(--grey);padding:1.5rem;">No holdings yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+<div class="card">
+  <div class="card-title" style="margin-bottom:.8rem;">Transaction History</div>
+  <div class="table-wrap"><table class="data-table">
+    <thead><tr><th>Date</th><th>Type</th><th>Status</th><th class="text-right">Amount (USD)</th></tr></thead>
+    <tbody>{% for t in transactions %}<tr>
+      <td class="mono">{{ t.txn_date.strftime('%d %b %Y') }}</td><td>{{ t.txn_type.replace('_',' ') }}</td>
+      <td><span class="badge badge-{{ 'approved' if t.status=='APPROVED' else 'pending' }}">{{ t.status }}</span></td>
+      <td class="num">{{ "{:,.2f}".format(t.amount) }}</td>
+    </tr>{% else %}<tr><td colspan="4" style="text-align:center;color:var(--grey);padding:1.5rem;">No transactions yet.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

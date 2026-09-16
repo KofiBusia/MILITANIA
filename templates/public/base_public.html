@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Militania Investment{% endblock %}</title>
+<meta name="description" content="Militania Investment — world-class portfolio management, live market intelligence, and transparent reporting.">
+<meta property="og:title" content="Militania Investment">
+<meta property="og:description" content="World-class portfolio management, live market intelligence, and transparent reporting.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/logo.png') }}">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --black:#0D0D0D; --dark:#171717; --bronze:#A9815E; --bronze2:#D3B18A;
+  --white:#F5F0EA; --grey:#9A9184; --surface:#1B1815; --border:rgba(169,129,94,0.22);
+  --font-display:'Cormorant Garamond',serif; --font-body:'DM Sans',sans-serif;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--dark); color:var(--white); font-family:var(--font-body); }
+a { text-decoration:none; }
+.nav { display:flex; align-items:center; justify-content:space-between; padding:1.1rem 3rem;
+  border-bottom:1px solid var(--border); background:var(--black); position:sticky; top:0; z-index:10; flex-wrap:wrap; gap:1rem; }
+.nav .brand { display:flex; align-items:center; gap:10px; }
+.nav .brand img { height:34px; }
+.nav .brand span { font-family:var(--font-display); font-size:1.3rem; font-weight:700; color:var(--bronze2); letter-spacing:1px; }
+.nav-links { display:flex; gap:2rem; align-items:center; }
+.nav-links a { color:var(--grey); font-size:13px; letter-spacing:.5px; text-transform:uppercase; font-weight:500; }
+.nav-links a:hover, .nav-links a.active { color:var(--bronze2); }
+.nav-cta { display:flex; gap:.7rem; }
+.btn { padding:9px 18px; border-radius:7px; font-size:12.5px; font-weight:600; cursor:pointer; border:none; }
+.btn-primary { background:var(--bronze); color:#141210; }
+.btn-primary:hover { background:var(--bronze2); }
+.btn-outline { background:transparent; color:var(--bronze2); border:1px solid var(--border); }
+.btn-outline:hover { border-color:var(--bronze); }
+footer { padding:2.5rem 3rem; border-top:1px solid var(--border); color:var(--grey); font-size:12px;
+  display:flex; justify-content:space-between; flex-wrap:wrap; gap:1rem; }
+footer a { color:var(--grey); }
+@media (max-width:800px){ .nav{padding:1rem 1.2rem;} .nav-links{display:none;} footer{padding:1.5rem;} }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="nav">
+  <a href="{{ url_for('public.home') }}" class="brand">
+    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Militania">
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('public.home') }}" class="{{ 'active' if request.endpoint=='public.home' }}">Home</a>
+    <a href="{{ url_for('public.about') }}" class="{{ 'active' if request.endpoint=='public.about' }}">About</a>
+    <a href="{{ url_for('public.portfolio') }}" class="{{ 'active' if request.endpoint=='public.portfolio' }}">Portfolio</a>
+    <a href="{{ url_for('public.contact') }}" class="{{ 'active' if request.endpoint=='public.contact' }}">Contact</a>
+  </div>
+  <div class="nav-cta">
+    <a href="{{ url_for('auth.login') }}" class="btn btn-outline">Sign In</a>
+    <a href="{{ url_for('auth.signup') }}" class="btn btn-primary">Open an Account</a>
+  </div>
+</div>
+{% block content %}{% endblock %}
+<footer>
+  <span>&copy; {{ 2026 }} Militania Investment. All rights reserved.</span>
+  <span><a href="{{ url_for('public.contact') }}">Contact</a> &middot; <a href="{{ url_for('auth.login') }}">Client Sign In</a></span>
+</footer>
+</body>
+</html>
