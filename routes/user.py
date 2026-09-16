@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_login import login_required, current_user
 from extensions import db
-from models import ClientAccount, Investment, Transaction, ClientRequest, ASSET_LABELS
+from models import ClientAccount, Investment, Transaction, ClientRequest, get_asset_labels
 from utils.notifications import audit
 from datetime import datetime
 
@@ -36,9 +36,10 @@ def dashboard():
     total_value = sum(i.computed_mkt_value for i in investments)
     cash = acc.cash_balance
     portfolio_value = total_value + cash
+    asset_labels = get_asset_labels()
     by_class = {}
     for inv in investments:
-        lbl = ASSET_LABELS.get(inv.asset_class, inv.asset_class)
+        lbl = asset_labels.get(inv.asset_class, inv.asset_class)
         by_class[lbl] = by_class.get(lbl, 0) + inv.computed_mkt_value
     return render_template('user/dashboard.html', acc=acc, investments=investments,
         transactions=transactions, requests=requests_, total_value=total_value, cash=cash,

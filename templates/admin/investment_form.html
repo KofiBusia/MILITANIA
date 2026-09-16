@@ -1,9 +1,26 @@
 {% extends 'base.html' %}
 {% block title %}New Investment — Militania{% endblock %}
+{% block extra_css %}
+<style>
+.asset-panel { display:none; }
+.asset-panel.active { display:block; }
+.panel-note { font-size:11px; color:var(--grey); margin-bottom:1rem; line-height:1.6; }
+.currency-toggle { display:flex; gap:0; border:1px solid var(--border); border-radius:6px; overflow:hidden; width:fit-content; margin-bottom:0; }
+.currency-toggle button { padding:8px 16px; background:transparent; border:none; color:var(--grey); font-size:12px; font-weight:600; cursor:pointer; font-family:var(--font-body); }
+.currency-toggle button.active { background:var(--bronze); color:#141210; }
+.preview-box { background:rgba(169,129,94,0.08); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-top:1rem; }
+.preview-box .row { display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0; color:var(--grey); }
+.preview-box .row b { color:var(--white); font-family:var(--font-mono); }
+.preview-box .row.total { border-top:1px solid var(--border); margin-top:6px; padding-top:8px; }
+.preview-box .row.total b { color:var(--bronze2); font-size:14px; }
+</style>
+{% endblock %}
 {% block content %}
-<div class="page-header"><div><h1>New Investment</h1></div><a href="{{ url_for('admin.investments') }}" class="btn btn-secondary">← Back</a></div>
-<div class="card" style="max-width:800px;">
-  <form method="POST">
+<div class="page-header"><div><h1>New Investment</h1><p>The form adapts to the asset class you select</p></div>
+<a href="{{ url_for('admin.investments') }}" class="btn btn-secondary">← Back</a></div>
+
+<div class="card" style="max-width:820px;">
+  <form method="POST" id="inv-form">
     <div class="form-grid-2">
       <div class="form-group"><label>Account Number *</label>
         <select name="account_number" required>
@@ -11,27 +28,154 @@
         </select>
       </div>
       <div class="form-group"><label>Asset Class *</label>
-        <select name="asset_class" required>
-          {% for c in asset_classes %}<option value="{{ c }}">{{ c.replace('_',' ') }}</option>{% endfor %}
+        <select name="asset_class" id="asset_class" required onchange="switchPanel()">
+          <option value="">— Select Asset Class —</option>
+          {% for c in asset_classes %}<option value="{{ c }}">{{ asset_labels[c] }}</option>{% endfor %}
         </select>
       </div>
-      <div class="form-group"><label>Symbol</label><input type="text" name="symbol" placeholder="e.g. AAPL"></div>
-      <div class="form-group"><label>Security Name</label><input type="text" name="security_name"></div>
-      <div class="form-group"><label>Issuer</label><input type="text" name="issuer"></div>
-      <div class="form-group"><label>Sector</label><input type="text" name="sector"></div>
-      <div class="form-group"><label>Exchange</label><input type="text" name="exchange" placeholder="e.g. NASDAQ"></div>
       <div class="form-group"><label>Trade Date</label><input type="date" name="trade_date"></div>
-      <div class="form-group"><label>Quantity</label><input type="number" step="0.0001" name="quantity"></div>
-      <div class="form-group"><label>Unit Cost (USD)</label><input type="number" step="0.0001" name="unit_cost"></div>
-      <div class="form-group"><label>Total Cost (USD)</label><input type="number" step="0.01" name="total_cost"></div>
-      <div class="form-group"><label>Current Price (USD)</label><input type="number" step="0.0001" name="current_price"></div>
-      <div class="form-group"><label>Face Value (USD)</label><input type="number" step="0.01" name="face_value"></div>
-      <div class="form-group"><label>Interest Rate %</label><input type="number" step="0.01" name="interest_rate"></div>
-      <div class="form-group"><label>Coupon Rate %</label><input type="number" step="0.01" name="coupon_rate"></div>
-      <div class="form-group"><label>Tenor (days)</label><input type="number" name="tenor"></div>
-      <div class="form-group"><label>Maturity Date</label><input type="date" name="maturity_date"></div>
     </div>
-    <button type="submit" class="btn btn-primary">Save Investment</button>
+
+    <!-- ══ EQUITIES (GSE / Global) ══ -->
+    <div class="asset-panel" id="panel-equity">
+      <p class="panel-note" id="equity-note">Priced live once submitted — the market feed keeps this holding's value current automatically.</p>
+      <div class="form-grid-2">
+        <div class="form-group"><label>Symbol *</label><input type="text" name="symbol" id="eq-symbol" placeholder="e.g. MTNGH"></div>
+        <div class="form-group"><label>Security Name *</label><input type="text" name="security_name" placeholder="e.g. MTN Ghana Limited"></div>
+        <div class="form-group"><label>Sector</label><input type="text" name="sector" placeholder="e.g. Telecommunications"></div>
+        <div class="form-group" id="eq-exchange-group"><label>Exchange</label><input type="text" name="exchange" placeholder="e.g. NASDAQ"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Pricing Currency</label>
+        <div class="currency-toggle" id="currency-toggle">
+          <button type="button" data-ccy="USD" onclick="setCurrency('USD')">USD</button>
+          <button type="button" data-ccy="GHS" onclick="setCurrency('GHS')">GHS</button>
+        </div>
+        <input type="hidden" name="eq_currency" id="eq_currency" value="USD">
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group"><label>Quantity (Number of Shares) *</label>
+          <input type="number" step="0.0001" name="eq_quantity" id="eq_quantity" oninput="updatePreview()"></div>
+        <div class="form-group"><label>Purchase Price (<span class="eq-ccy-label">USD</span>) *</label>
+          <input type="number" step="0.0001" name="eq_purchase_price" id="eq_purchase_price" oninput="updatePreview()"></div>
+        <div class="form-group"><label>Commission / Fees (%)</label>
+          <input type="number" step="0.01" name="eq_commission_pct" id="eq_commission_pct" value="0" oninput="updatePreview()">
+        </div>
+        <div class="form-group"><label>Current Market Price (<span class="eq-ccy-label">USD</span>)</label>
+          <input type="number" step="0.0001" name="eq_current_price" id="eq_current_price" placeholder="Defaults to purchase price if left blank"></div>
+      </div>
+
+      <div class="preview-box">
+        <div class="row"><span>Principal (Qty × Price)</span><b id="prev-principal">—</b></div>
+        <div class="row"><span>Commission / Fees</span><b id="prev-commission">—</b></div>
+        <div class="row total"><span>Total Cost Basis (<span class="eq-ccy-label">USD</span>)</span><b id="prev-total">—</b></div>
+        <p id="prev-convert-note" style="font-size:10.5px;color:var(--grey);margin-top:6px;display:none;">
+          Stored in USD — converted automatically from GHS using the live FX rate when you save.</p>
+      </div>
+    </div>
+
+    <!-- ══ MONEY MARKET / GOVT SECURITIES ══ -->
+    <div class="asset-panel" id="panel-mm">
+      <div class="form-grid-2">
+        <div class="form-group"><label>Issuer *</label><input type="text" name="mm_issuer" placeholder="e.g. Republic of Ghana"></div>
+        <div class="form-group"><label>Face Value / Principal (USD) *</label><input type="number" step="0.01" name="mm_face_value"></div>
+        <div class="form-group"><label>Interest Rate (%)</label><input type="number" step="0.01" name="mm_interest_rate"></div>
+        <div class="form-group"><label>Tenor (days)</label><input type="number" name="mm_tenor"></div>
+        <div class="form-group"><label>Maturity Date</label><input type="date" name="mm_maturity_date"></div>
+      </div>
+    </div>
+
+    <!-- ══ BONDS / EUROBONDS ══ -->
+    <div class="asset-panel" id="panel-bond">
+      <div class="form-grid-2">
+        <div class="form-group"><label>Issuer *</label><input type="text" name="bond_issuer" placeholder="e.g. Government of Ghana"></div>
+        <div class="form-group"><label>Face Value (USD) *</label><input type="number" step="0.01" name="bond_face_value"></div>
+        <div class="form-group"><label>Coupon Rate (%)</label><input type="number" step="0.01" name="bond_coupon_rate"></div>
+        <div class="form-group"><label>Maturity Date</label><input type="date" name="bond_maturity_date"></div>
+      </div>
+    </div>
+
+    <!-- ══ MUTUAL FUNDS ══ -->
+    <div class="asset-panel" id="panel-mf">
+      <div class="form-grid-2">
+        <div class="form-group"><label>Security / Fund Name *</label><input type="text" name="mf_security_name"></div>
+        <div class="form-group"><label>Fund Type</label><input type="text" name="mf_fund_type" placeholder="e.g. Equity Fund"></div>
+        <div class="form-group"><label>Units *</label><input type="number" step="0.0001" name="mf_units"></div>
+        <div class="form-group"><label>Unit Cost (USD) *</label><input type="number" step="0.0001" name="mf_unit_cost"></div>
+        <div class="form-group"><label>Current NAV (USD)</label><input type="number" step="0.0001" name="mf_nav" placeholder="Defaults to unit cost if left blank"></div>
+      </div>
+    </div>
+
+    <!-- ══ GENERIC / ALTERNATIVE (Private Equity, Real Estate, custom classes, etc.) ══ -->
+    <div class="asset-panel" id="panel-alt">
+      <p class="panel-note">This asset class has no dedicated live pricing yet — it's valued at cost until you (or a future update) add one.</p>
+      <div class="form-grid-2">
+        <div class="form-group"><label>Security / Deal Name *</label><input type="text" name="alt_name"></div>
+        <div class="form-group"><label>Issuer / Counterparty</label><input type="text" name="alt_issuer"></div>
+        <div class="form-group"><label>Sector</label><input type="text" name="alt_sector"></div>
+        <div class="form-group"><label>Total Cost (USD) *</label><input type="number" step="0.01" name="alt_total_cost"></div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="margin-top:.5rem;">Save Investment</button>
   </form>
 </div>
+
+<script>
+const PANEL_MAP = {
+  'GSE_EQUITIES': 'panel-equity', 'GLOBAL_EQUITIES': 'panel-equity',
+  'MONEY_MARKET': 'panel-mm', 'GOVT_SECURITIES': 'panel-mm',
+  'BONDS': 'panel-bond', 'EUROBONDS': 'panel-bond',
+  'MUTUAL_FUNDS': 'panel-mf',
+};
+const GSE_DEFAULT_COMMISSION = 2.5;
+const GLOBAL_DEFAULT_COMMISSION = 0;
+
+function switchPanel() {
+  const ac = document.getElementById('asset_class').value;
+  const panelId = PANEL_MAP[ac] || 'panel-alt';
+  document.querySelectorAll('.asset-panel').forEach(p => p.classList.toggle('active', p.id === panelId));
+
+  if (panelId === 'panel-equity') {
+    const isGSE = ac === 'GSE_EQUITIES';
+    document.getElementById('eq-exchange-group').style.display = isGSE ? 'none' : 'block';
+    document.getElementById('eq-symbol').required = true;
+    document.getElementById('eq_commission_pct').value = isGSE ? GSE_DEFAULT_COMMISSION : GLOBAL_DEFAULT_COMMISSION;
+    document.getElementById('equity-note').textContent = isGSE
+      ? 'GSE-listed shares are priced live from the Ghana Stock Exchange and converted to USD automatically. A 2.5% commission is pre-filled — adjust it if your actual brokerage fee differs.'
+      : 'Priced live from major global exchanges throughout the trading day.';
+    setCurrency(isGSE ? 'GHS' : 'USD');
+  }
+  updatePreview();
+}
+
+function setCurrency(ccy) {
+  document.getElementById('eq_currency').value = ccy;
+  document.querySelectorAll('#currency-toggle button').forEach(b => b.classList.toggle('active', b.dataset.ccy === ccy));
+  document.querySelectorAll('.eq-ccy-label').forEach(el => el.textContent = ccy);
+  updatePreview();
+}
+
+function money(v) { return v.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+function updatePreview() {
+  const qty = parseFloat(document.getElementById('eq_quantity').value) || 0;
+  const price = parseFloat(document.getElementById('eq_purchase_price').value) || 0;
+  const comm = parseFloat(document.getElementById('eq_commission_pct').value) || 0;
+  const ccy = document.getElementById('eq_currency').value;
+  const principal = qty * price;
+  const commissionAmt = principal * comm / 100;
+  const total = principal + commissionAmt;
+  document.getElementById('prev-principal').textContent = `${ccy} ${money(principal)}`;
+  document.getElementById('prev-commission').textContent = `${ccy} ${money(commissionAmt)} (${comm}%)`;
+  document.getElementById('prev-total').textContent = `${ccy} ${money(total)}`;
+  document.getElementById('prev-convert-note').style.display = (ccy === 'GHS') ? 'block' : 'none';
+}
+
+// initialize on load in case the browser restores a selected value
+switchPanel();
+setCurrency('USD');
+</script>
 {% endblock %}

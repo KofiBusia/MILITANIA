@@ -1,7 +1,21 @@
 import os
 import secrets
 from extensions import db
-from models import AdminUser
+from models import AdminUser, AssetClass, DEFAULT_ASSET_CLASSES
+
+
+def seed_asset_classes():
+    """Idempotent: only inserts classes that don't exist yet by code, so
+    it never touches or duplicates ones a Super Admin has added since."""
+    existing = {a.code for a in AssetClass.query.all()}
+    added = 0
+    for code, label in DEFAULT_ASSET_CLASSES:
+        if code not in existing:
+            db.session.add(AssetClass(code=code, label=label))
+            added += 1
+    if added:
+        db.session.commit()
+        print(f"[SEED] Added {added} default asset class(es)")
 
 
 def _bootstrap_password():

@@ -85,8 +85,9 @@ def create_app():
             from utils.schema_migrate import ensure_schema
             _safe(lambda: ensure_schema(DB_SCHEMA if is_postgres else None), 'ensure_schema')
             _safe(db.create_all, 'db.create_all')
-            from utils.seed import seed_super_admin
+            from utils.seed import seed_super_admin, seed_asset_classes
             _safe(seed_super_admin, 'seed_super_admin')
+            _safe(seed_asset_classes, 'seed_asset_classes')
             from utils.market_data import fetch_fx_rates, fetch_global_prices, fetch_gse_prices
             _safe(fetch_fx_rates, 'fetch_fx_rates')
             _safe(fetch_global_prices, 'fetch_global_prices')

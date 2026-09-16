@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session
 from flask_login import login_required, current_user
 from extensions import db
-from models import AdminUser, ClientAccount, ClientUser, Investment, Transaction, ClientRequest, ADMIN_ROLES, ASSET_CLASSES, ASSET_LABELS
+from models import (AdminUser, ClientAccount, ClientUser, Investment, Transaction, ClientRequest,
+                     ADMIN_ROLES, AssetClass, get_asset_classes, get_asset_labels)
 from utils.notifications import audit
 from datetime import datetime, date
 
@@ -58,9 +59,10 @@ def dashboard():
     total_cash = sum(a.cash_balance for a in ClientAccount.query.filter_by(status='APPROVED').all())
     total_aum = aum + total_cash
     recent_txns = Transaction.query.order_by(Transaction.created_at.desc()).limit(10).all()
+    asset_labels = get_asset_labels()
     by_class = {}
     for inv in investments:
-        lbl = ASSET_LABELS.get(inv.asset_class, inv.asset_class)
+        lbl = asset_labels.get(inv.asset_class, inv.asset_class)
         by_class[lbl] = by_class.get(lbl, 0) + inv.computed_mkt_value
     fx = get_all_fx()
     return render_template('admin/dashboard.html',
@@ -147,7 +149,7 @@ def investments():
     if asset_class: query = query.filter_by(asset_class=asset_class)
     return render_template('admin/investments.html',
         investments=query.order_by(Investment.created_at.desc()).all(),
-        q=q, status=status, asset_class=asset_class, asset_classes=ASSET_CLASSES, asset_labels=ASSET_LABELS)
+        q=q, status=status, asset_class=asset_class, asset_classes=get_asset_classes(), asset_labels=get_asset_labels())
 
 
 @admin_bp.route('/investments/new', methods=['GET', 'POST'])
@@ -160,33 +162,85 @@ def new_investment():
         if not acc:
             flash('Account not found.', 'error'); return redirect(request.url)
         asset_class = request.form.get('asset_class', '').upper()
-        quantity = _float(request.form.get('quantity'))
-        unit_cost = _float(request.form.get('unit_cost'))
-        total_cost = _float(request.form.get('total_cost'))
-        if quantity and unit_cost and not total_cost:
-            total_cost = quantity * unit_cost
+        trade_date = _parse_date(request.form.get('trade_date')) or date.today()
+
+        symbol = security_name = issuer = sector = exchange = None
+        quantity = unit_cost = total_cost = current_price = None
+        face_value = interest_rate = coupon_rate = None
+        tenor = maturity_date = None
+        commission_note = ''
+
+        if asset_class in ('GSE_EQUITIES', 'GLOBAL_EQUITIES'):
+            symbol = request.form.get('symbol')
+            security_name = request.form.get('security_name')
+            sector = request.form.get('sector')
+            exchange = 'GSE' if asset_class == 'GSE_EQUITIES' else request.form.get('exchange')
+            quantity = _float(request.form.get('eq_quantity'))
+            purchase_price = _float(request.form.get('eq_purchase_price'))
+            cp_input = _float(request.form.get('eq_current_price'))
+            price_currency = request.form.get('eq_currency', 'USD')
+            commission_pct = _float(request.form.get('eq_commission_pct'))
+            if commission_pct is None:
+                commission_pct = 2.5 if asset_class == 'GSE_EQUITIES' else 0.0
+
+            fx = 1.0
+            if price_currency == 'GHS':
+                from utils.market_data import get_fx_rate
+                fx = get_fx_rate('GHS', 'USD')
+
+            unit_cost = round(purchase_price * fx, 6) if purchase_price else None
+            current_price = round(cp_input * fx, 6) if cp_input else unit_cost
+            if quantity and unit_cost:
+                principal = quantity * unit_cost
+                total_cost = round(principal * (1 + commission_pct / 100), 4)
+                commission_note = f' commission={commission_pct}% ({price_currency} entry)'
+
+        elif asset_class in ('MONEY_MARKET', 'GOVT_SECURITIES'):
+            issuer = request.form.get('mm_issuer')
+            face_value = _float(request.form.get('mm_face_value'))
+            interest_rate = _float(request.form.get('mm_interest_rate'))
+            tenor = int(request.form.get('mm_tenor')) if request.form.get('mm_tenor') else None
+            maturity_date = _parse_date(request.form.get('mm_maturity_date'))
+            total_cost = face_value
+
+        elif asset_class in ('BONDS', 'EUROBONDS'):
+            issuer = request.form.get('bond_issuer')
+            face_value = _float(request.form.get('bond_face_value'))
+            coupon_rate = _float(request.form.get('bond_coupon_rate'))
+            maturity_date = _parse_date(request.form.get('bond_maturity_date'))
+            total_cost = face_value
+
+        elif asset_class == 'MUTUAL_FUNDS':
+            security_name = request.form.get('mf_security_name')
+            sector = request.form.get('mf_fund_type')
+            quantity = _float(request.form.get('mf_units'))
+            unit_cost = _float(request.form.get('mf_unit_cost'))
+            current_price = _float(request.form.get('mf_nav')) or unit_cost
+            if quantity and unit_cost:
+                total_cost = round(quantity * unit_cost, 4)
+
+        else:  # generic panel — Private Equity, Real Estate, any custom class, etc.
+            security_name = request.form.get('alt_name')
+            issuer = request.form.get('alt_issuer')
+            sector = request.form.get('alt_sector')
+            total_cost = _float(request.form.get('alt_total_cost'))
+
         inv = Investment(
             account_number=acc_no, asset_class=asset_class,
-            symbol=request.form.get('symbol'), security_name=request.form.get('security_name'),
-            issuer=request.form.get('issuer'), sector=request.form.get('sector'),
-            exchange=request.form.get('exchange'),
-            quantity=quantity, unit_cost=unit_cost, total_cost=total_cost,
-            current_price=_float(request.form.get('current_price')),
-            face_value=_float(request.form.get('face_value')),
-            interest_rate=_float(request.form.get('interest_rate')),
-            coupon_rate=_float(request.form.get('coupon_rate')),
-            tenor=int(request.form.get('tenor')) if request.form.get('tenor') else None,
-            trade_date=_parse_date(request.form.get('trade_date')) or date.today(),
-            maturity_date=_parse_date(request.form.get('maturity_date')),
+            symbol=symbol, security_name=security_name, issuer=issuer, sector=sector, exchange=exchange,
+            quantity=quantity, unit_cost=unit_cost, total_cost=total_cost, current_price=current_price,
+            face_value=face_value, interest_rate=interest_rate, coupon_rate=coupon_rate,
+            tenor=tenor, trade_date=trade_date, maturity_date=maturity_date,
             status='APPROVED' if current_user.is_super_admin else 'PENDING',
             approved_by=current_user.id if current_user.is_super_admin else None,
         )
         db.session.add(inv)
         db.session.commit()
-        audit('INV_ENTRY', target=acc_no, detail=f'{asset_class} cost={total_cost}')
+        audit('INV_ENTRY', target=acc_no, detail=f'{asset_class} cost={total_cost}{commission_note}')
         flash('Investment recorded.', 'success')
         return redirect(url_for('admin.investments'))
-    return render_template('admin/investment_form.html', accounts=accounts, asset_classes=ASSET_CLASSES)
+    return render_template('admin/investment_form.html', accounts=accounts,
+                            asset_classes=get_asset_classes(), asset_labels=get_asset_labels())
 
 
 @admin_bp.route('/investments/<int:inv_id>/approve', methods=['POST'])
@@ -287,6 +341,33 @@ def action_request(req_id):
     audit('REQ_ACTION', target=r.account_number, detail=f'req={r.id} {action}')
     flash(f'Request {action}d.', 'success')
     return redirect(url_for('admin.client_requests'))
+
+
+@admin_bp.route('/asset-classes')
+@permission_required('manage_all')
+def asset_classes_page():
+    return render_template('admin/asset_classes.html',
+        classes=AssetClass.query.order_by(AssetClass.label).all())
+
+
+@admin_bp.route('/asset-classes/new', methods=['POST'])
+@permission_required('manage_all')
+def new_asset_class():
+    code = (request.form.get('code') or '').strip().upper().replace(' ', '_')
+    label = (request.form.get('label') or '').strip()
+    if not code or not label:
+        flash('Both a code and a label are required.', 'error')
+        return redirect(url_for('admin.asset_classes_page'))
+    if AssetClass.query.filter_by(code=code).first():
+        flash(f'Asset class "{code}" already exists.', 'error')
+        return redirect(url_for('admin.asset_classes_page'))
+    db.session.add(AssetClass(code=code, label=label))
+    db.session.commit()
+    audit('ASSET_CLASS_CREATE', target=code, detail=label)
+    flash(f'Asset class "{label}" ({code}) created. It will appear in the '
+          f'investment form under a generic entry panel and be valued at cost '
+          f'until given dedicated pricing logic.', 'success')
+    return redirect(url_for('admin.asset_classes_page'))
 
 
 @admin_bp.route('/stocks')

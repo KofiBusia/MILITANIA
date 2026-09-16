@@ -7,7 +7,8 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT
 
-from models import ClientAccount, Investment, Transaction, ASSET_LABELS
+from models import ClientAccount, Investment, Transaction, get_asset_labels, SPECIAL_ASSET_CLASSES
+from utils.market_data import get_fx_rate
 
 BLACK  = colors.HexColor('#171717')
 BRONZE = colors.HexColor('#A9815E')
@@ -119,26 +120,36 @@ def generate_pvr(account_number):
     story.append(info_tbl)
     story.append(Spacer(1, 0.3*cm))
 
+    # GHS equivalent is shown alongside USD throughout using the live FX
+    # feed (utils/market_data.py, sourced from open.er-api.com) — GHS is
+    # the reference currency Ghana-based stakeholders expect to see next
+    # to the USD figures this report is otherwise denominated in.
+    ghs_per_usd = get_fx_rate('USD', 'GHS')
+    def ghs(usd_val):
+        return (usd_val or 0) * ghs_per_usd
+
+    asset_labels = get_asset_labels()
     section_heading(story, 'PORTFOLIO SUMMARY (USD)', S)
-    sum_rows = [['Asset Class', 'Market Value (USD)', 'Weight %']]
-    for cls, lbl in ASSET_LABELS.items():
+    sum_rows = [['Asset Class', 'Market Value (USD)', 'GHS Equivalent', 'Weight %']]
+    for cls, lbl in asset_labels.items():
         mv = by_class.get(cls, 0)
         if mv:
             wt = (mv/total_port*100) if total_port else 0
-            sum_rows.append([lbl, fmt(mv), fmt_pct(wt)])
+            sum_rows.append([lbl, fmt(mv), fmt(ghs(mv)), fmt_pct(wt)])
     cash_wt = (cash/total_port*100) if total_port else 0
-    sum_rows.append(['Cash & Bank Balances', fmt(cash), fmt_pct(cash_wt)])
+    sum_rows.append(['Cash & Bank Balances', fmt(cash), fmt(ghs(cash)), fmt_pct(cash_wt)])
     t_idx = len(sum_rows)
-    sum_rows.append(['TOTAL PORTFOLIO VALUE', fmt(total_port), '100.00%'])
-    sum_tbl = Table(sum_rows, colWidths=[8*cm, 6*cm, 4*cm])
+    sum_rows.append(['TOTAL PORTFOLIO VALUE', fmt(total_port), fmt(ghs(total_port)), '100.00%'])
+    sum_tbl = Table(sum_rows, colWidths=[7*cm, 5*cm, 5*cm, 3*cm])
     ts = tbl_style(); ts.add('ALIGN', (1,0), (-1,-1), 'RIGHT'); total_row(ts, t_idx)
     sum_tbl.setStyle(ts)
     story.append(sum_tbl)
+    story.append(Paragraph(f'FX rate: 1 USD = {ghs_per_usd:,.4f} GHS (live, source: open.er-api.com)', S['small']))
     story.append(Spacer(1, 0.4*cm))
 
-    mm = [i for i in investments if i.asset_class == 'MONEY_MARKET']
+    mm = [i for i in investments if i.asset_class in ('MONEY_MARKET', 'GOVT_SECURITIES')]
     if mm:
-        section_heading(story, 'MONEY MARKET', S)
+        section_heading(story, 'MONEY MARKET & GOVERNMENT SECURITIES', S)
         rows = [['Issuer', 'Trade Date', 'Principal (USD)', 'Rate %', 'Days Run', 'Accrued Int.', 'Mkt Value (USD)', 'Maturity']]
         tot = 0
         for i in mm:
@@ -151,9 +162,9 @@ def generate_pvr(account_number):
         ts = tbl_style(); ts.add('ALIGN',(2,0),(-1,-1),'RIGHT'); total_row(ts, len(rows)-1)
         tbl.setStyle(ts); story.append(tbl); story.append(Spacer(1,0.25*cm))
 
-    bonds = [i for i in investments if i.asset_class == 'BONDS']
+    bonds = [i for i in investments if i.asset_class in ('BONDS', 'EUROBONDS')]
     if bonds:
-        section_heading(story, 'BONDS & FIXED INCOME', S)
+        section_heading(story, 'BONDS, EUROBONDS & FIXED INCOME', S)
         rows = [['Issuer', 'Trade Date', 'Face Value (USD)', 'Coupon %', 'Accrued Int.', 'Mkt Value (USD)', 'Maturity']]
         tot = 0
         for i in bonds:
@@ -201,6 +212,25 @@ def generate_pvr(account_number):
         rows.append(['TOTAL','','','',fmt(tot_mv),fmt(tot_mv-tot_cost)])
         tbl = Table(rows, colWidths=[5*cm,2.5*cm,2.5*cm,2.5*cm,3*cm,2.8*cm])
         ts = tbl_style(); ts.add('ALIGN',(1,0),(-1,-1),'RIGHT'); total_row(ts, len(rows)-1)
+        tbl.setStyle(ts); story.append(tbl); story.append(Spacer(1,0.25*cm))
+
+    # Anything not covered by a dedicated section above — Private Equity,
+    # Real Estate, custom admin-created classes, etc. — still gets
+    # line-item detail here rather than only showing up in the summary
+    # total, valued at cost since these have no live pricing source.
+    other = [i for i in investments if i.asset_class not in SPECIAL_ASSET_CLASSES]
+    if other:
+        section_heading(story, 'OTHER HOLDINGS', S)
+        rows = [['Asset Class', 'Security / Issuer', 'Trade Date', 'Mkt Value (USD)']]
+        tot = 0
+        for i in other:
+            mv = i.computed_mkt_value; tot += mv
+            rows.append([asset_labels.get(i.asset_class, i.asset_class.replace('_',' ')),
+                P(i.security_name or i.issuer or i.symbol, S['cell']),
+                i.trade_date.strftime('%d %b %Y') if i.trade_date else '—', fmt(mv)])
+        rows.append(['TOTAL','','',fmt(tot)])
+        tbl = Table(rows, colWidths=[4.5*cm,7*cm,3*cm,3.5*cm])
+        ts = tbl_style(); ts.add('ALIGN',(3,0),(-1,-1),'RIGHT'); total_row(ts, len(rows)-1)
         tbl.setStyle(ts); story.append(tbl); story.append(Spacer(1,0.25*cm))
 
     story.append(Spacer(1, 0.3*cm))
@@ -283,7 +313,7 @@ def generate_global_report(asset_class=None):
     tbl.setStyle(ts)
     story.append(tbl)
 
-    title = f'Global Report — {ASSET_LABELS.get(asset_class, "All Classes")}'
+    title = f'Global Report — {get_asset_labels().get(asset_class, "All Classes") if asset_class else "All Classes"}'
     doc.build(story, onFirstPage=lhf(title), onLaterPages=lhf(title))
     buf.seek(0)
     return buf

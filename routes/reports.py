@@ -1,6 +1,6 @@
 from flask import Blueprint, send_file, request, redirect, url_for, flash, render_template, session
 from flask_login import login_required, current_user
-from models import ClientAccount, ASSET_CLASSES, ASSET_LABELS
+from models import ClientAccount, get_asset_classes, get_asset_labels
 from reports.pdf_reports import generate_pvr, generate_statement, generate_global_report
 from datetime import datetime, date
 
@@ -73,5 +73,5 @@ def global_report():
 @login_required
 def menu():
     accounts = ClientAccount.query.filter_by(status='APPROVED').order_by(ClientAccount.full_name).all()
-    return render_template('admin/reports_menu.html', accounts=accounts, asset_classes=ASSET_CLASSES,
-                            asset_labels=ASSET_LABELS, now=datetime.utcnow())
+    return render_template('admin/reports_menu.html', accounts=accounts, asset_classes=get_asset_classes(),
+                            asset_labels=get_asset_labels(), now=datetime.utcnow())

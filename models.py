@@ -14,14 +14,50 @@ PERMISSION_MAP = {
     'enter_investment': 50, 'approve_investment': 60, 'view_reports': 10,
 }
 
-ASSET_CLASSES = ['MONEY_MARKET', 'BONDS', 'GSE_EQUITIES', 'GLOBAL_EQUITIES', 'MUTUAL_FUNDS']
-ASSET_LABELS = {
-    'MONEY_MARKET': 'Money Market',
-    'BONDS': 'Bonds & Fixed Income',
-    'GSE_EQUITIES': 'GSE Equities',
-    'GLOBAL_EQUITIES': 'Global Equities',
-    'MUTUAL_FUNDS': 'Mutual Funds & ETFs',
-}
+# Seed data only — the live, admin-editable list lives in the AssetClass
+# table below. This is just what gets planted on first run.
+DEFAULT_ASSET_CLASSES = [
+    ('MONEY_MARKET',       'Money Market'),
+    ('GOVT_SECURITIES',    'Government Securities & T-Bills'),
+    ('BONDS',              'Bonds & Fixed Income'),
+    ('EUROBONDS',          'Eurobonds'),
+    ('GSE_EQUITIES',       'GSE Equities'),
+    ('GLOBAL_EQUITIES',    'Global Equities'),
+    ('MUTUAL_FUNDS',       'Mutual Funds & ETFs'),
+    ('PRIVATE_EQUITY',     'Private Equity'),
+    ('PRIVATE_DEBT',       'Private Debt'),
+    ('REAL_ESTATE',        'Real Estate'),
+    ('COMMODITIES',        'Commodities'),
+    ('HEDGE_FUNDS',        'Hedge Funds'),
+    ('STRUCTURED_PRODUCTS','Structured Products'),
+    ('DIGITAL_ASSETS',     'Digital Assets'),
+]
+
+# Asset classes with dedicated valuation logic/report sections. Anything
+# else — including any class an admin creates later — is valued at cost
+# (computed_mkt_value's fallback) and shown in the report's generic
+# "Other Holdings" section, so new classes work immediately with no code
+# changes required.
+SPECIAL_ASSET_CLASSES = {'MONEY_MARKET', 'GOVT_SECURITIES', 'BONDS', 'EUROBONDS',
+                          'GSE_EQUITIES', 'GLOBAL_EQUITIES', 'MUTUAL_FUNDS'}
+
+
+class AssetClass(db.Model):
+    """The live, admin-manageable list of asset classes. Seeded from
+    DEFAULT_ASSET_CLASSES on first run; Super Admins can add more via
+    Admin > Asset Classes."""
+    __tablename__ = 'asset_classes'
+    id         = db.Column(db.Integer, primary_key=True)
+    code       = db.Column(db.String(40), unique=True, nullable=False)
+    label      = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+def get_asset_classes():
+    """Flat list of codes, ordered by label, from the live AssetClass table."""
+    return [a.code for a in AssetClass.query.order_by(AssetClass.label).all()]
+
+def get_asset_labels():
+    return {a.code: a.label for a in AssetClass.query.all()}
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -163,7 +199,7 @@ class Investment(db.Model):
 
     @property
     def accrued_interest(self):
-        if self.asset_class in ('MONEY_MARKET', 'BONDS') and self.face_value and (self.interest_rate or self.coupon_rate):
+        if self.asset_class in ('MONEY_MARKET', 'GOVT_SECURITIES', 'BONDS', 'EUROBONDS') and self.face_value and (self.interest_rate or self.coupon_rate):
             rate = self.interest_rate or self.coupon_rate
             ref = self.trade_date
             days = max(0, (date.today() - ref).days) if ref else 0
@@ -172,10 +208,10 @@ class Investment(db.Model):
 
     @property
     def computed_mkt_value(self):
-        if self.asset_class == 'MONEY_MARKET':
+        if self.asset_class in ('MONEY_MARKET', 'GOVT_SECURITIES'):
             principal = self.face_value or self.total_cost or 0
             return principal + self.accrued_interest
-        elif self.asset_class == 'BONDS':
+        elif self.asset_class in ('BONDS', 'EUROBONDS'):
             if self.face_value and (self.interest_rate or self.coupon_rate):
                 return (self.face_value or 0) + self.accrued_interest
             return self.total_cost or 0

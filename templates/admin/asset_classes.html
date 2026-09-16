@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Asset Classes — Militania{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1>Asset Classes</h1><p>{{ classes|length }} class(es) available across accounts, investments, and reports</p></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="card-title" style="margin-bottom:1rem;">Existing Classes</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Code</th><th>Label</th><th>Added</th></tr></thead>
+        <tbody>
+          {% for c in classes %}
+          <tr>
+            <td class="mono" style="color:var(--bronze2);">{{ c.code }}</td>
+            <td>{{ c.label }}</td>
+            <td class="mono" style="color:var(--grey);font-size:11px;">{{ c.created_at.strftime('%d %b %Y') if c.created_at else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title" style="margin-bottom:1rem;">Add New Asset Class</div>
+    <form method="POST" action="{{ url_for('admin.new_asset_class') }}">
+      <div class="form-group">
+        <label>Code (used internally, e.g. INFRASTRUCTURE)</label>
+        <input type="text" name="code" required placeholder="e.g. INFRASTRUCTURE" style="text-transform:uppercase;">
+      </div>
+      <div class="form-group">
+        <label>Display Label</label>
+        <input type="text" name="label" required placeholder="e.g. Infrastructure Funds">
+      </div>
+      <button type="submit" class="btn btn-primary full-width">Add Asset Class</button>
+    </form>
+    <p style="font-size:11px;color:var(--grey);margin-top:1rem;line-height:1.6;">
+      New classes appear immediately in the investment entry form (under a generic
+      details panel — security/issuer name, sector, and total cost) and throughout
+      reports. They're valued at cost until dedicated live-pricing logic is added for them.
+    </p>
+  </div>
+</div>
+{% endblock %}

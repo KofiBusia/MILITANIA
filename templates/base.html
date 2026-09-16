@@ -18,6 +18,7 @@
   --font-mono: 'DM Mono', monospace;
   --radius: 10px;
 }
+:root { color-scheme: dark; }
 * { box-sizing: border-box; }
 html { overflow-x:hidden; }
 body { margin:0; background: var(--dark); color: var(--white); font-family: var(--font-body); min-height:100vh; overflow-x:hidden; }
@@ -148,6 +149,7 @@ a { color: var(--bronze); }
     <div class="nav-group">
       <div class="nav-label">Administration</div>
       <a class="nav-link {{ 'active' if request.endpoint and 'admin_user' in request.endpoint }}" href="{{ url_for('admin.admin_users') }}">Staff</a>
+      <a class="nav-link {{ 'active' if request.endpoint and 'asset_class' in request.endpoint }}" href="{{ url_for('admin.asset_classes_page') }}">Asset Classes</a>
     </div>
     {% endif %}
     {% elif session.get('user_type') == 'client' %}
